@@ -11,6 +11,7 @@ const app = express()
 
 app.use(bodyParser.json());
 app.use(cors());
+app.use(express.static('image'));
 app.use(fileUpload());
 
 const port = 5000;
@@ -28,8 +29,10 @@ client.connect(err => {
     const adminNameCollection = client.db("istStudentEnrollmentSystem").collection("adminName");
     const sessionCollection = client.db("istStudentEnrollmentSystem").collection("session");
     const semesterCollection = client.db("istStudentEnrollmentSystem").collection("semester");
+    const questionCollection = client.db("istStudentEnrollmentSystem").collection("question");
     app.post('/addStudent', (req, res) => {
         const file = req.files.file;
+        const image = req.files.file.name;
         const name = req.body.name;
         const roll = req.body.roll;
         const session = req.body.session;
@@ -37,14 +40,19 @@ client.connect(err => {
         const mobile = req.body.mobile;
         const department = req.body.department;
         const category = req.body.category;
-        const newImg = file.data;
-        const encImg = newImg.toString('base64');
+        // const newImg = file.data;
+        // const encImg = newImg.toString('base64');
 
-        var image = {
-            contentType: file.mimetype,
-            size: file.size,
-            img: Buffer.from(encImg, 'base64')
-        };
+        // var image = {
+        //     contentType: file.mimetype,
+        //     size: file.size,
+        //     img: Buffer.from(encImg, 'base64')
+        // };
+        file.mv(`${__dirname}/image/student/${file.name}`, err => {
+            if (err) {
+                return res.status(500).send({ msg: 'Failed to upload Image' });
+            }
+        })
 
         studentCollection.insertOne({ name, roll, session, email, mobile, department, image, category })
             .then(result => {
@@ -98,18 +106,10 @@ client.connect(err => {
 
 
     app.post('/addDepartment', (req, res) => {
-        const file = req.files.file;
-        const department = req.body.department;
-        const newImg = file.data;
-        const encImg = newImg.toString('base64');
-
-        var image = {
-            contentType: file.mimetype,
-            size: file.size,
-            img: Buffer.from(encImg, 'base64')
-        };
-
-        departmentCollection.insertOne({ department, image })
+        // const file = req.files.file;
+        const department = req.body;
+        // console.log(department)
+        departmentCollection.insertOne(department)
             .then(result => {
                 res.send(result.insertedCount > 0);
             })
@@ -130,6 +130,20 @@ client.connect(err => {
                 res.send(result.insertedCount > 0);
             })
     })
+    app.get('/adminList', (req, res) => {
+        // console.log(res)
+        adminCollection.find({})
+            .toArray((err, documents) => {
+                res.send(documents);
+            })
+    })
+    app.delete('/deleteAdmin/:id', (req, res) => {
+        // console.log(req.params.id);
+        adminCollection.deleteOne({ _id: ObjectId(req.params.id) })
+            .then((result) => {
+                res.send(result.deletedCount > 0);
+            })
+    })
     app.post('/addAdminName', (req, res) => {
         const adminName = req.body;
         adminNameCollection.insertOne(adminName)
@@ -137,6 +151,7 @@ client.connect(err => {
                 res.send(result.insertedCount > 0);
             })
     })
+
     app.post('/adminName', (req, res) => {
         const email = req.body.email;
         adminNameCollection.find({ email: email })
@@ -184,21 +199,26 @@ client.connect(err => {
 
     app.post('/addTeacher', (req, res) => {
         const file = req.files.file;
+        const image = req.files.file.name;
         const name = req.body.name;
         const designation = req.body.designation;
         const email = req.body.email;
         const mobile = req.body.mobile;
         const department = req.body.department;
         const category = req.body.category;
-        const newImg = file.data;
-        const encImg = newImg.toString('base64');
+        // const newImg = file.data;
+        // const encImg = newImg.toString('base64');
 
-        var image = {
-            contentType: file.mimetype,
-            size: file.size,
-            img: Buffer.from(encImg, 'base64')
-        };
-
+        // var image = {
+        //     contentType: file.mimetype,
+        //     size: file.size,
+        //     img: Buffer.from(encImg, 'base64')
+        // };
+        file.mv(`${__dirname}/image/teacher/${file.name}`, err => {
+            if (err) {
+                return res.status(500).send({ msg: 'Failed to upload Image' });
+            }
+        })
         teacherCollection.insertOne({ name, designation, category, email, mobile, department, image })
             .then(result => {
                 res.send(result.insertedCount > 0);
@@ -226,6 +246,30 @@ client.connect(err => {
                 res.send(result.insertedCount > 0);
             })
     })
+    app.patch('/updateSemester/:id', (req, res) => {
+        semesterCollection.updateOne({ _id: ObjectId(req.params.id) },
+            {
+                $set: {
+                    semester: req.body.semester, session: req.body.session, department: req.body.department, teacher: req.body.teacher, status: req.body.status
+                },
+            })
+            .then(result => {
+                res.send(result.matchedCount > 0);
+            })
+    })
+
+    app.get('/semesters', (req, res) => {
+        semesterCollection.find()
+            .toArray((err, documents) => {
+                res.send(documents);
+            })
+    })
+    app.get('/semester/:id', (req, res) => {
+        semesterCollection.find({ _id: ObjectId(req.params.id) })
+            .toArray((err, documents) => {
+                res.send(documents[0]);
+            })
+    })
     app.post('/semesterById', (req, res) => {
         const id = req.body.id;
         semesterCollection.find({})
@@ -239,6 +283,31 @@ client.connect(err => {
                 res.send(filterTeacher);
             })
     })
+
+
+
+    app.post('/addQuestion', (req, res) => {
+        const question = req.body;
+        questionCollection.insertOne(question)
+            .then(result => {
+                res.send(result.insertedCount > 0);
+            })
+    })
+    app.post('/teacherQuestion', (req, res) => {
+        const email = req.body.email;
+        questionCollection.find({ email: email })
+            .toArray((err, documents) => {
+                res.send(documents);
+            })
+    })
+    app.get('/question/:id', (req, res) => {
+        questionCollection.find({ _id: ObjectId(req.params.id) })
+            .toArray((err, documents) => {
+                res.send(documents[0]);
+            })
+    })
+
+
 });
 
 
