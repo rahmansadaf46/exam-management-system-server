@@ -230,6 +230,28 @@ client.connect(err => {
                 res.send(documents);
             })
     })
+    app.patch('/updateTeacher/:id', (req, res) => {
+        teacherCollection.updateOne({ _id: ObjectId(req.params.id) },
+            {
+                $set: req.body,
+            })
+            .then(result => {
+                res.send(result.matchedCount > 0);
+            })
+    })
+    app.delete('/deleteTeacher/:id', (req, res) => {
+        // console.log(req.params.id);
+        teacherCollection.deleteOne({ _id: ObjectId(req.params.id) })
+            .then((result) => {
+                res.send(result.deletedCount > 0);
+            })
+    })
+    app.get('/teacherProfile/:id', (req, res) => {
+        teacherCollection.find({ _id: ObjectId(req.params.id) })
+            .toArray((err, documents) => {
+                res.send(documents[0]);
+            })
+    })
     app.post('/isTeacher', (req, res) => {
         const email = req.body.email;
         teacherCollection.find({ email: email })
@@ -257,6 +279,58 @@ client.connect(err => {
                 res.send(result.matchedCount > 0);
             })
     })
+    // app.patch('/updateSemesterTeacher/:id', (req, res) => {
+    //     console.log(req.params.id)
+
+    //     const id = req.params.id;
+    //     console.log(id)
+    //     semesterCollection.find({})
+    //         .toArray((err, documents) => {
+    //             const data = documents.filter(data => data.teacher = data.teacher.filter(person => person !== id));
+    //             // const filterTeacher = teacher.filter((el) => {
+    //             //     return el.teacher.some((value) => {
+    //             //         return value === id;
+    //             //     });
+    //             // })
+    //             // const filter = { teacher: filterTeacher };
+    //             const updateDoc = {
+    //                 $set: {
+    //                     teacher: req.body,
+    //                 },
+    //             };
+    //             const updateTeacher =(value)=> {
+    //                 return {
+    //                     $set: {
+    //                         teacher: value,
+    //                     },
+    //                 };
+    //             } 
+    //             const bulkOps = data.map(obj => {
+    //                 return {
+    //                   updateOne: {
+    //                     filter: {
+    //                       _id: obj._id
+    //                     },
+    //                     // If you were using the MongoDB driver directly, you'd need to do
+    //                     // `update: { $set: { field: ... } }` but mongoose adds $set for you
+    //                     update: {
+    //                       teacher: obj[teacher]
+    //                     }
+    //                   }
+    //                 }
+    //               })
+                  
+    //               MongooseModel.bulkWrite(bulkOps).then((res) => {
+    //                 console.log("Documents Updated", res.modifiedCount)
+    //               })
+    //             // semesterCollection.updateMany({},)
+    //             //     .then(result => {
+    //             //         res.send(result.matchedCount > 0);
+    //             //     })
+                    
+    //         })      // increment every document matching the filter with 2 more comments
+
+    // })
 
     app.get('/semesters', (req, res) => {
         semesterCollection.find()
@@ -291,6 +365,22 @@ client.connect(err => {
         questionCollection.insertOne(question)
             .then(result => {
                 res.send(result.insertedCount > 0);
+            })
+    })
+    app.patch('/updateQuestion/:id', (req, res) => {
+        questionCollection.updateOne({ _id: ObjectId(req.params.id) },
+            {
+                $set: req.body,
+            })
+            .then(result => {
+                res.send(result.matchedCount > 0);
+            })
+    })
+    app.delete('/deleteQuestion/:id', (req, res) => {
+        // console.log(req.params.id);
+        questionCollection.deleteOne({ _id: ObjectId(req.params.id) })
+            .then((result) => {
+                res.send(result.deletedCount > 0);
             })
     })
     app.post('/teacherQuestion', (req, res) => {
