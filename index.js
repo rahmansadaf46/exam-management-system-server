@@ -344,6 +344,13 @@ client.connect(err => {
                 res.send(documents[0]);
             })
     })
+    app.get('/semesterStudent/:session/:dept', (req, res) => {
+        semesterCollection.find({ session: req.params.session })
+            .toArray((err, documents) => {
+                const response = documents.filter(data=>data.department===req.params.dept);
+                res.send(response);
+            })
+    })
     app.post('/semesterById', (req, res) => {
         const id = req.body.id;
         semesterCollection.find({})
@@ -396,8 +403,32 @@ client.connect(err => {
                 res.send(documents[0]);
             })
     })
-
-
+    app.get('/question/:id', (req, res) => {
+        questionCollection.find({ _id: ObjectId(req.params.id) })
+            .toArray((err, documents) => {
+                res.send(documents[0]);
+            })
+    })
+    app.post('/questionStudent', (req, res) => {
+        const data = req.body;
+        // console.log(data);
+        questionCollection.find({ department: data.department })
+            .toArray((err, documents) => {
+                const filterData = documents.filter(question=>question.session === data.session && question.semester === data.semester);
+                let result = [];
+                filterData.forEach(element => {
+                    result.push({
+                        _id: element._id,
+                        examName: element.examName,
+                        time: element.time,
+                        teacherName: element.teacherName,
+                        duration: element.duration
+                    })
+                })
+                // console.log(result);
+                res.send(result);
+            })
+    })
 });
 
 
