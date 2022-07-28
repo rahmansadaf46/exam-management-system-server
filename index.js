@@ -40,14 +40,7 @@ client.connect(err => {
         const mobile = req.body.mobile;
         const department = req.body.department;
         const category = req.body.category;
-        // const newImg = file.data;
-        // const encImg = newImg.toString('base64');
 
-        // var image = {
-        //     contentType: file.mimetype,
-        //     size: file.size,
-        //     img: Buffer.from(encImg, 'base64')
-        // };
         file.mv(`${__dirname}/image/student/${file.name}`, err => {
             if (err) {
                 return res.status(500).send({ msg: 'Failed to upload Image' });
@@ -60,7 +53,6 @@ client.connect(err => {
             })
     })
     app.delete('/delete/:id', (req, res) => {
-        // console.log(req.params.id);
         studentCollection.deleteOne({ _id: ObjectId(req.params.id) })
             .then((result) => {
                 res.send(result.deletedCount > 0);
@@ -106,9 +98,7 @@ client.connect(err => {
 
 
     app.post('/addDepartment', (req, res) => {
-        // const file = req.files.file;
         const department = req.body;
-        // console.log(department)
         departmentCollection.insertOne(department)
             .then(result => {
                 res.send(result.insertedCount > 0);
@@ -116,7 +106,6 @@ client.connect(err => {
     })
 
     app.get('/departments', (req, res) => {
-        // console.log(res)
         departmentCollection.find({})
             .toArray((err, documents) => {
                 res.send(documents);
@@ -131,14 +120,12 @@ client.connect(err => {
             })
     })
     app.get('/adminList', (req, res) => {
-        // console.log(res)
         adminCollection.find({})
             .toArray((err, documents) => {
                 res.send(documents);
             })
     })
     app.delete('/deleteAdmin/:id', (req, res) => {
-        // console.log(req.params.id);
         adminCollection.deleteOne({ _id: ObjectId(req.params.id) })
             .then((result) => {
                 res.send(result.deletedCount > 0);
@@ -206,14 +193,6 @@ client.connect(err => {
         const mobile = req.body.mobile;
         const department = req.body.department;
         const category = req.body.category;
-        // const newImg = file.data;
-        // const encImg = newImg.toString('base64');
-
-        // var image = {
-        //     contentType: file.mimetype,
-        //     size: file.size,
-        //     img: Buffer.from(encImg, 'base64')
-        // };
         file.mv(`${__dirname}/image/teacher/${file.name}`, err => {
             if (err) {
                 return res.status(500).send({ msg: 'Failed to upload Image' });
@@ -240,7 +219,6 @@ client.connect(err => {
             })
     })
     app.delete('/deleteTeacher/:id', (req, res) => {
-        // console.log(req.params.id);
         teacherCollection.deleteOne({ _id: ObjectId(req.params.id) })
             .then((result) => {
                 res.send(result.deletedCount > 0);
@@ -319,7 +297,7 @@ client.connect(err => {
     //                   }
     //                 }
     //               })
-                  
+
     //               MongooseModel.bulkWrite(bulkOps).then((res) => {
     //                 console.log("Documents Updated", res.modifiedCount)
     //               })
@@ -327,7 +305,7 @@ client.connect(err => {
     //             //     .then(result => {
     //             //         res.send(result.matchedCount > 0);
     //             //     })
-                    
+
     //         })      // increment every document matching the filter with 2 more comments
 
     // })
@@ -338,6 +316,7 @@ client.connect(err => {
                 res.send(documents);
             })
     })
+
     app.get('/semester/:id', (req, res) => {
         semesterCollection.find({ _id: ObjectId(req.params.id) })
             .toArray((err, documents) => {
@@ -347,7 +326,7 @@ client.connect(err => {
     app.get('/semesterStudent/:session/:dept', (req, res) => {
         semesterCollection.find({ session: req.params.session })
             .toArray((err, documents) => {
-                const response = documents.filter(data=>data.department===req.params.dept);
+                const response = documents.filter(data => data.department === req.params.dept);
                 res.send(response);
             })
     })
@@ -414,7 +393,7 @@ client.connect(err => {
         // console.log(data);
         questionCollection.find({ department: data.department })
             .toArray((err, documents) => {
-                const filterData = documents.filter(question=>question.session === data.session && question.semester === data.semester);
+                const filterData = documents.filter(question => question.session === data.session && question.semester === data.semester);
                 let result = [];
                 filterData.forEach(element => {
                     result.push({
@@ -427,6 +406,32 @@ client.connect(err => {
                 })
                 // console.log(result);
                 res.send(result);
+            })
+    })
+    app.get('/questionFind/:id', (req, res) => {
+        questionCollection.find({ _id: ObjectId(req.params.id) })
+            .toArray((err, documents) => {
+                // console.log(documents[0])
+                const question = documents[0];
+                const filterQuestion = question.question.map((data) => { return Object.fromEntries(Object.entries(data).filter(([key, value]) => key !== 'rightAnswer')) }
+                )
+                // console.log(filterQuestion)
+                question.question = filterQuestion;
+                const endTime = new Date(new Date(question.time).getTime() + question.duration * 60000);
+                const validDate = new Date() > new Date(question.time);
+                console.log(validDate, new Date(endTime));
+                if (validDate) {
+                    res.send({
+                        validation: true,
+                        question: question
+                    });
+                }
+                else {
+                    res.send({
+                        validation: false
+                    });
+                }
+
             })
     })
 });
