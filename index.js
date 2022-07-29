@@ -413,13 +413,21 @@ client.connect(err => {
             .toArray((err, documents) => {
                 // console.log(documents[0])
                 const question = documents[0];
-                const filterQuestion = question.question.map((data) => { return Object.fromEntries(Object.entries(data).filter(([key, value]) => key !== 'rightAnswer')) }
-                )
+                let filterQuestion = [];
                 // console.log(filterQuestion)
-                question.question = filterQuestion;
+                if(question.category === 'viva'){
+                    filterQuestion = question.question.map((data) => { return Object.fromEntries(Object.entries(data).filter(([key, value]) => key !== 'hostLink')) })
+                    question.question = filterQuestion;
+                }
+
+                else if(question.category === 'mcq'){
+                    filterQuestion = question.question.map((data) => { return Object.fromEntries(Object.entries(data).filter(([key, value]) => key !== 'rightAnswer')) })
+                    question.question = filterQuestion;
+                }
+                
                 const endTime = new Date(new Date(question.time).getTime() + question.duration * 60000);
-                const validDate = new Date() > new Date(question.time);
-                console.log(validDate, new Date(endTime));
+                const validDate = new Date() > new Date(question.time) && new Date() < new Date(endTime);
+                // console.log(validDate, new Date(endTime));
                 if (validDate) {
                     res.send({
                         validation: true,
