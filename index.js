@@ -725,6 +725,15 @@ client.connect(err => {
     //             res.send(documents[0]);
     //         })
     // })
+    app.post('/resultViva', (req, res) => {
+        const email = req.body.email;
+        const questionId = req.body.questionId;
+        resultCollection.find({ questionId: questionId })
+            .toArray((err, documents) => {
+                let filterData = documents.filter(data=> data.studentEmail === email);
+                res.send(filterData.length>0);
+            })
+    })
 });
 
 
