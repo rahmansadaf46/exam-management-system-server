@@ -30,6 +30,8 @@ client.connect(err => {
     const sessionCollection = client.db("istStudentEnrollmentSystem").collection("session");
     const semesterCollection = client.db("istStudentEnrollmentSystem").collection("semester");
     const questionCollection = client.db("istStudentEnrollmentSystem").collection("question");
+    const resultCollection = client.db("istStudentEnrollmentSystem").collection("result");
+    const resultSheetCollection = client.db("istStudentEnrollmentSystem").collection("resultSheetCollection");
     app.post('/addStudent', (req, res) => {
         const file = req.files.file;
         const image = req.files.file.name;
@@ -87,7 +89,16 @@ client.connect(err => {
                 res.send(documents);
             })
     })
-
+    app.post('/studentsForExam', (req, res) => {
+        const info = req.body.data;
+        // console.log(info)
+        studentCollection.find({ department: info.department })
+            .toArray((err, documents) => {
+                // res.send(documents);
+                const response = documents.filter(data => data.session === info.session);
+                res.send(response);
+            })
+    })
     app.post('/studentsByDept/:department', (req, res) => {
         const roll = req.params.department;
         studentCollection.find({ department: req.params.department })
@@ -348,9 +359,22 @@ client.connect(err => {
 
     app.post('/addQuestion', (req, res) => {
         const question = req.body;
+        // const students = req.body.students;
         questionCollection.insertOne(question)
             .then(result => {
-                res.send(result.insertedCount > 0);
+                res.send(result.ops);
+                // let ques = result.ops[0];
+                // if (result.ops) {
+                //     let sheet = {
+                //         question: ques,
+                //         students: students
+                //     }
+                //     resultSheetCollection.insertOne(sheet)
+                //         .then(result => {
+                //             res.send(result.insertedCount > 0);
+                //         })
+                // }
+
             })
     })
     app.patch('/updateQuestion/:id', (req, res) => {
@@ -415,17 +439,17 @@ client.connect(err => {
                 const question = documents[0];
                 let filterQuestion = [];
                 // console.log(filterQuestion)
-                if(question.category === 'viva'){
+                if (question.category === 'viva') {
                     filterQuestion = question.question.map((data) => { return Object.fromEntries(Object.entries(data).filter(([key, value]) => key !== 'hostLink')) })
                     question.question = filterQuestion;
                 }
 
-                else if(question.category === 'mcq'){
+                else if (question.category === 'mcq') {
                     filterQuestion = question.question.map((data) => { return Object.fromEntries(Object.entries(data).filter(([key, value]) => key !== 'rightAnswer')) })
                     question.question = filterQuestion;
                 }
-                
-                const endTime = new Date(new Date(question.time).getTime() + question.duration * 60000);
+
+                const endTime = new Date((new Date(question.time).getTime() - 1) + question.duration * 60000);
                 const validDate = new Date() > new Date(question.time) && new Date() < new Date(endTime);
                 // console.log(validDate, new Date(endTime));
                 if (validDate) {
@@ -442,6 +466,265 @@ client.connect(err => {
 
             })
     })
+
+
+    app.post('/addResult1', (req, res) => {
+        const questionData = req.body.question;
+        const answer = req.body.answer;
+        const student = req.body.student;
+        // console.log(question)
+        // console.log(questionData)   
+
+        questionCollection.find({ _id: ObjectId(questionData._id) })
+            .toArray((err, documents) => {
+                const question = documents[0].question;
+                if (questionData.category === 'mcq') {
+                    let rightAnswer = [];
+                    answer.forEach(ans => {
+                        // console.log(data)
+                        question.forEach(ques => {
+                            if (ques.questionName === ans.questionName) {
+                                if (ans.category === 'mcq') {
+                                    if (ques.rightAnswer === ans.answer) {
+                                        rightAnswer.push({
+                                            questionNumber: ques.questionNumber,
+                                            category: ques.category,
+                                            questionName: ques.questionName,
+                                            answer1: ques.answer1,
+                                            answer2: ques.answer2,
+                                            answer3: ques.answer3,
+                                            answer4: ques.answer4,
+                                            rightAnswer: ques.rightAnswer,
+                                            mark: parseInt(ques.mark),
+                                            obtainedMark: parseInt(ques.mark),
+                                            givenAnswer: ans.answer,
+                                            answer: 'Right'
+                                        })
+                                    }
+                                    else {
+                                        rightAnswer.push({
+                                            questionNumber: ques.questionNumber,
+                                            category: ques.category,
+                                            questionName: ques.questionName,
+                                            answer1: ques.answer1,
+                                            answer2: ques.answer2,
+                                            answer3: ques.answer3,
+                                            answer4: ques.answer4,
+                                            rightAnswer: ques.rightAnswer,
+                                            mark: parseInt(ques.mark),
+                                            obtainedMark: parseInt(0),
+                                            givenAnswer: ans.answer,
+                                            answer: 'Wrong'
+                                        })
+                                    }
+                                }
+                                else if (ans.category === 'fillInTheGaps') {
+                                    if (ques.rightAnswer.toLowerCase() === ans.answer.toLowerCase()) {
+                                        rightAnswer.push({
+                                            questionNumber: ques.questionNumber,
+                                            category: ques.category,
+                                            questionName: ques.questionName,
+                                            rightAnswer: ques.rightAnswer,
+                                            mark: parseInt(ques.mark),
+                                            obtainedMark: parseInt(ques.mark),
+                                            givenAnswer: ans.answer,
+                                            answer: 'Right'
+                                        })
+                                    }
+                                    else {
+                                        rightAnswer.push({
+                                            questionNumber: ques.questionNumber,
+                                            category: ques.category,
+                                            questionName: ques.questionName,
+                                            rightAnswer: ques.rightAnswer,
+                                            mark: parseInt(ques.mark),
+                                            obtainedMark: parseInt(0),
+                                            givenAnswer: ans.answer,
+                                            answer: 'Wrong'
+                                        })
+                                    }
+                                }
+
+                            }
+
+
+                        })
+                    })
+                    let notAnswer = question.filter(function (objOne) {
+                        return !rightAnswer.some(function (objTwo) {
+                            return objOne.questionName === objTwo.questionName;
+                        });
+                    })
+                    let obtainedMark = [];
+                    rightAnswer.forEach(ans => {
+                        if (ans.answer === 'Right') {
+                            obtainedMark.push(ans.mark);
+                        }
+                    })
+                    let fullMark = [];
+                    question.forEach(ques => {
+                        fullMark.push(parseInt(ques.mark))
+                    })
+                    // console.log(rightAnswer, notAnswer, obtainedMark.reduce((a, b) => a + b, 0), fullMark.reduce((a, b) => a + b, 0))
+
+                    let dataBody = {
+                        questionId: questionData._id,
+                        examName: questionData.examName,
+                        category: questionData.category,
+                        teacherName: questionData.teacherName,
+                        teacherEmail: questionData.email,
+                        time: questionData.time,
+                        duration: questionData.duration,
+                        semester: questionData.semester,
+                        department: questionData.department,
+                        session: questionData.session,
+                        totalQuestion: questionData.totalQuestion,
+                        studentEmail: student[0].email,
+                        studentName: student[0].name,
+                        studentRoll: student[0].roll,
+                        totalMark: fullMark.reduce((a, b) => a + b, 0),
+                        obtainedMark: obtainedMark.reduce((a, b) => a + b, 0),
+                        answerData: {
+                            answer: rightAnswer,
+                            notAnswer: notAnswer
+                        }
+                    }
+                    // console.log(dataBody);
+                    resultCollection.insertOne(dataBody)
+                        .then(result => {
+                            res.send(result.ops);
+                        })
+                }
+                else if (questionData.category === 'written') {
+                    let givenAnswer = [];
+                    answer.forEach(ans => {
+                        // console.log(data)
+                        givenAnswer.push({
+                            questionNumber: ans.questionNumber,
+                            category: ans.category,
+                            questionName: ans.questionName,
+                            givenAnswer: ans.answer,
+                            mark: parseInt(ans.mark),
+                            obtainedMark: parseInt(0),
+                            status: 'Not Checked'
+                        })
+                    })
+                    let notAnswer = question.filter(function (objOne) {
+                        return !givenAnswer.some(function (objTwo) {
+                            return objOne.questionName === objTwo.questionName;
+                        });
+                    })
+                    let fullMark = [];
+                    question.forEach(ques => {
+                        fullMark.push(parseInt(ques.mark))
+                    })
+                    let dataBody = {
+                        questionId: questionData._id,
+                        examName: questionData.examName,
+                        category: questionData.category,
+                        teacherName: questionData.teacherName,
+                        teacherEmail: questionData.email,
+                        time: questionData.time,
+                        duration: questionData.duration,
+                        semester: questionData.semester,
+                        department: questionData.department,
+                        session: questionData.session,
+                        totalQuestion: questionData.totalQuestion,
+                        studentEmail: student[0].email,
+                        studentName: student[0].name,
+                        studentRoll: student[0].roll,
+                        status: 'Not Checked',
+                        totalMark: fullMark.reduce((a, b) => a + b, 0),
+                        obtainedMark: parseInt(0),
+                        answerData: {
+                            answer: givenAnswer,
+                            notAnswer: notAnswer
+                        }
+                    }
+                    // console.log(dataBody)
+                    resultCollection.insertOne(dataBody)
+                        .then(result => {
+                            res.send(result.ops);
+                        })
+                }
+                else if (questionData.category === 'viva') {
+
+
+
+                    let dataBody = {
+                        questionId: questionData._id,
+                        examName: questionData.examName,
+                        category: questionData.category,
+                        teacherName: questionData.teacherName,
+                        teacherEmail: questionData.email,
+                        time: questionData.time,
+                        duration: questionData.duration,
+                        semester: questionData.semester,
+                        department: questionData.department,
+                        session: questionData.session,
+                        totalQuestion: questionData.totalQuestion,
+                        studentEmail: student[0].email,
+                        studentName: student[0].name,
+                        studentRoll: student[0].roll,
+                        status: 'Not Checked',
+                        totalMark: answer.mark,
+                        obtainedMark: parseInt(0),
+                        answerData: {
+                            answer: answer,
+                            // notAnswer: notAnswer
+                        }
+                    }
+                    // console.log(dataBody)
+                    resultCollection.insertOne(dataBody)
+                        .then(result => {
+                            res.send(result.ops);
+                        })
+                }
+
+            })
+    })
+    app.patch('/updateResult/:id', (req, res) => {
+        resultCollection.updateOne({ _id: ObjectId(req.params.id) },
+            {
+                $set: {
+                    answerData: req.body.answerData, obtainedMark: req.body.obtainedMark, status: req.body.status,
+                }
+            })
+            .then(result => {
+                res.send(result.matchedCount > 0);
+            })
+    })
+    // app.patch('/updateResult/:id', (req, res) => {
+    //     resultCollection.updateOne({ _id: ObjectId(req.params.id) },
+    //         {
+    //             $set: req.body,
+    //         })
+    //         .then(result => {
+    //             res.send(result.matchedCount > 0);
+    //         })
+    // })
+    app.post('/resultFind', (req, res) => {
+        const id = req.body.questionId;
+        resultCollection.find({ questionId: id })
+            .toArray((err, documents) => {
+                res.send(documents);
+            })
+    })
+    app.get('/resultDetails/:id', (req, res) => {
+
+        resultCollection.find({ _id: ObjectId(req.params.id) })
+            .toArray((err, documents) => {
+                res.send(documents[0]);
+            })
+    })
+
+    // app.get('/resultViva/:quesId/:email', (req, res) => {
+
+    //     resultCollection.find({ _id: ObjectId(req.params.id) })
+    //         .toArray((err, documents) => {
+    //             res.send(documents[0]);
+    //         })
+    // })
 });
 
 
