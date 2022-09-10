@@ -466,14 +466,51 @@ client.connect(err => {
 
             })
     })
+    app.post('/addResult2', (req, res) => {
 
+        const file = req.files.file;
+        const doc = req.files.file.name;
+        const obtainedMark = parseInt(req.body.obtainedMark);
+        const totalMark = parseInt(req.body.totalMark);
+        const status = req.body.status;
+        const studentRoll = req.body.studentRoll;
+        const studentName = req.body.studentName;
+        const questionId = req.body.questionId;
+        const examName = req.body.examName;
+        const category = req.body.category;
+        const teacherName = req.body.teacherName;
+        const teacherEmail = req.body.teacherEmail;
+        const time = req.body.time;
+        const duration = req.body.duration;
+        const semester = req.body.semester;
+        const department = req.body.department;
+        const session = req.body.session;
+        const totalQuestion = req.body.totalQuestion;
+        const studentEmail = req.body.studentEmail;
+
+        const assignmentDetails = req.body.assignmentDetails;
+        const assignmentCategory = req.body.assignmentCategory;
+        file.mv(`${__dirname}/image/files/${file.name}`, err => {
+            if (err) {
+                return res.status(500).send({ msg: 'Failed to upload Image' });
+            }
+        })
+        resultCollection.insertOne({ studentName, answerData:{
+            answer: [{
+                answer: doc,
+                category: assignmentCategory,
+                assignmentDetails: assignmentDetails
+            }]
+        },  totalMark, obtainedMark, questionId, studentRoll, status, studentEmail, totalQuestion, session, department, semester, duration, time, teacherEmail, teacherName, category, examName })
+            .then(result => {
+                res.send(result.insertedCount > 0);
+            })
+    })
 
     app.post('/addResult1', (req, res) => {
         const questionData = req.body.question;
         const answer = req.body.answer;
         const student = req.body.student;
-        // console.log(question)
-        // console.log(questionData)   
 
         questionCollection.find({ _id: ObjectId(questionData._id) })
             .toArray((err, documents) => {
@@ -680,7 +717,36 @@ client.connect(err => {
                             res.send(result.ops);
                         })
                 }
-
+                else if (questionData.category === 'assignment') {
+                    let dataBody = {
+                        questionId: questionData._id,
+                        examName: questionData.examName,
+                        category: questionData.category,
+                        teacherName: questionData.teacherName,
+                        teacherEmail: questionData.email,
+                        time: questionData.time,
+                        duration: questionData.duration,
+                        semester: questionData.semester,
+                        department: questionData.department,
+                        session: questionData.session,
+                        totalQuestion: questionData.totalQuestion,
+                        studentEmail: student[0].email,
+                        studentName: student[0].name,
+                        studentRoll: student[0].roll,
+                        status: 'Not Checked',
+                        totalMark: answer[0].mark,
+                        obtainedMark: parseInt(0),
+                        answerData: {
+                            answer: answer,
+                            // notAnswer: notAnswer
+                        }
+                    }
+                    // console.log(dataBody)
+                    resultCollection.insertOne(dataBody)
+                        .then(result => {
+                            res.send(result.ops);
+                        })
+                }
             })
     })
     app.patch('/updateResult/:id', (req, res) => {
@@ -730,8 +796,8 @@ client.connect(err => {
         const questionId = req.body.questionId;
         resultCollection.find({ questionId: questionId })
             .toArray((err, documents) => {
-                let filterData = documents.filter(data=> data.studentEmail === email);
-                res.send(filterData.length>0);
+                let filterData = documents.filter(data => data.studentEmail === email);
+                res.send(filterData.length > 0);
             })
     })
 });
