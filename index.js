@@ -800,6 +800,14 @@ client.connect(err => {
                 res.send(filterData.length > 0);
             })
     })
+
+    app.post('/resultStudent', (req, res) => {
+        const studentEmail = req.body.studentEmail;
+        resultCollection.find({ studentEmail: studentEmail })
+            .toArray((err, documents) => {
+                res.send(documents);
+            })
+    })
 });
 
 
